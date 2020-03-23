@@ -279,15 +279,21 @@ mbed_error_status_t mbed_warning(mbed_error_status_t error_status, const char *e
 }
 
 //Sets a fatal error, this function is marked WEAK to be able to override this for some tests
-WEAK MBED_NORETURN mbed_error_status_t mbed_error(mbed_error_status_t error_status, const char *error_msg, unsigned int error_value, const char *filename, int line_number)
+#if MBED_CONF_PLATFORM_MBED_ERROR_ENABLE_LOGGING
+WEAK MBED_NORETURN mbed_error_status_t mbed_error_impl(mbed_error_status_t error_status, const char *error_msg, unsigned int error_value, const char *filename, int line_number)
+#else
+WEAK MBED_NORETURN mbed_error_status_t mbed_error_impl(mbed_error_status_t error_status, unsigned int error_value, const char *filename, int line_number)
+#endif
 {
     // Prevent recursion if error is called again during store+print attempt
     if (!core_util_atomic_exchange_bool(&mbed_error_in_progress, true)) {
         //set the error reported
         (void) handle_error(error_status, error_value, filename, line_number, MBED_CALLER_ADDR());
 
+        #if MBED_CONF_PLATFORM_MBED_ERROR_ENABLE_LOGGING
         //On fatal errors print the error context/report
         ERROR_REPORT(&last_error_ctx, error_msg, filename, line_number);
+        #endif
     }
 
 #if MBED_CONF_PLATFORM_CRASH_CAPTURE_ENABLED

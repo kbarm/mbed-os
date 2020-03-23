@@ -150,6 +150,10 @@
         "minimal-printf-set-floating-point-max-decimals": {
             "help": "Maximum number of decimals to be printed when using minimal printf library",
             "value": 6
+        },
+        "mbed-error-enable-logging": {
+            "help": "Enable printing of error message to describe reason for raising error",
+            "value": false
         }
     },
     "target_overrides": {
