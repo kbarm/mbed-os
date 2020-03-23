@@ -1068,18 +1068,24 @@ bool mbed_get_error_in_progress(void);
  *
  * @note See MBED_WARNING/MBED_ERROR macros which provides a wrapper on this API
  */
-
-
 #if MBED_CONF_PLATFORM_MBED_ERROR_ENABLE_LOGGING
 #define mbed_error(ERROR_STATUS, ERROR_MSG, ERROR_VALUE, FILENAME, LINE_NUMBER) \
     mbed_error_impl(ERROR_STATUS, ERROR_MSG, ERROR_VALUE, FILENAME, LINE_NUMBER)
 
     MBED_NORETURN mbed_error_status_t mbed_error_impl(mbed_error_status_t error_status, const char *error_msg, unsigned int error_value, const char *filename, int line_number);
 #else
+
+#if MBED_CONF_PLATFORM_ERROR_FILENAME_CAPTURE_ENABLED
 #define mbed_error(ERROR_STATUS, ERROR_MSG, ERROR_VALUE, FILENAME, LINE_NUMBER) \
     mbed_error_impl(ERROR_STATUS, ERROR_VALUE, FILENAME, LINE_NUMBER)
 
     MBED_NORETURN mbed_error_status_t mbed_error_impl(mbed_error_status_t error_status, unsigned int error_value, const char *filename, int line_number);
+#else
+#define mbed_error(ERROR_STATUS, ERROR_MSG, ERROR_VALUE, FILENAME, LINE_NUMBER) \
+    mbed_error_impl(ERROR_STATUS, ERROR_VALUE)
+
+    MBED_NORETURN mbed_error_status_t mbed_error_impl(mbed_error_status_t error_status, unsigned int error_value);
+#endif
 #endif
 
 /**

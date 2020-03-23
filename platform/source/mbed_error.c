@@ -59,7 +59,12 @@ static mbed_error_ctx first_error_ctx = {0};
 
 static mbed_error_ctx last_error_ctx = {0};
 static mbed_error_hook_t error_hook = NULL;
+
+#if MBED_CONF_PLATFORM_ERROR_FILENAME_CAPTURE_ENABLED
 static mbed_error_status_t handle_error(mbed_error_status_t error_status, unsigned int error_value, const char *filename, int line_number, void *caller);
+#else
+static mbed_error_status_t handle_error(mbed_error_status_t error_status, unsigned int error_value, void *caller);
+#endif
 
 #if MBED_CONF_PLATFORM_CRASH_CAPTURE_ENABLED
 //Global for populating the context in exception handler
@@ -93,7 +98,11 @@ WEAK MBED_NORETURN void error(const char *format, ...)
 {
     // Prevent recursion if error is called again during store+print attempt
     if (!core_util_atomic_exchange_bool(&mbed_error_in_progress, true)) {
+#if MBED_CONF_PLATFORM_ERROR_FILENAME_CAPTURE_ENABLED
         handle_error(MBED_ERROR_UNKNOWN, 0, NULL, 0, MBED_CALLER_ADDR());
+#else
+        handle_error(MBED_ERROR_UNKNOWN, 0, MBED_CALLER_ADDR());
+#endif
         ERROR_REPORT(&last_error_ctx, "Fatal Run-time error", NULL, 0);
 
 #ifndef NDEBUG
@@ -130,7 +139,11 @@ static bool mbed_error_is_handler(const mbed_error_ctx *ctx)
 }
 
 //Set an error status with the error handling system
+#if MBED_CONF_PLATFORM_ERROR_FILENAME_CAPTURE_ENABLED
 static mbed_error_status_t handle_error(mbed_error_status_t error_status, unsigned int error_value, const char *filename, int line_number, void *caller)
+#else
+static mbed_error_status_t handle_error(mbed_error_status_t error_status, unsigned int error_value, void *caller)
+#endif
 {
     mbed_error_ctx current_error_ctx;
 
@@ -275,20 +288,33 @@ bool mbed_get_error_in_progress(void)
 //Sets a non-fatal error
 mbed_error_status_t mbed_warning(mbed_error_status_t error_status, const char *error_msg, unsigned int error_value, const char *filename, int line_number)
 {
+#if MBED_CONF_PLATFORM_ERROR_FILENAME_CAPTURE_ENABLED
     return handle_error(error_status, error_value, filename, line_number, MBED_CALLER_ADDR());
+#else
+    return handle_error(error_status, error_value, MBED_CALLER_ADDR());
+#endif
 }
 
 //Sets a fatal error, this function is marked WEAK to be able to override this for some tests
 #if MBED_CONF_PLATFORM_MBED_ERROR_ENABLE_LOGGING
 WEAK MBED_NORETURN mbed_error_status_t mbed_error_impl(mbed_error_status_t error_status, const char *error_msg, unsigned int error_value, const char *filename, int line_number)
 #else
+#if MBED_CONF_PLATFORM_ERROR_FILENAME_CAPTURE_ENABLED
 WEAK MBED_NORETURN mbed_error_status_t mbed_error_impl(mbed_error_status_t error_status, unsigned int error_value, const char *filename, int line_number)
+#else
+WEAK MBED_NORETURN mbed_error_status_t mbed_error_impl(mbed_error_status_t error_status, unsigned int error_value)
+#endif
 #endif
 {
     // Prevent recursion if error is called again during store+print attempt
     if (!core_util_atomic_exchange_bool(&mbed_error_in_progress, true)) {
         //set the error reported
+
+#if MBED_CONF_PLATFORM_ERROR_FILENAME_CAPTURE_ENABLED
         (void) handle_error(error_status, error_value, filename, line_number, MBED_CALLER_ADDR());
+#else
+        (void) handle_error(error_status, error_value,  MBED_CALLER_ADDR());
+#endif
 
         #if MBED_CONF_PLATFORM_MBED_ERROR_ENABLE_LOGGING
         //On fatal errors print the error context/report
